@@ -1,0 +1,7 @@
+spring:
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+
+test:
+  topic: demo-topic-test
