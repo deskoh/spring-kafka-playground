@@ -6,6 +6,9 @@ spring:
   threads:
     virtual:
       enabled: true
+  devtools:
+    restart:
+      enabled: false
   kafka:
     bootstrap-servers: localhost:9092
     producer:
@@ -22,17 +25,21 @@ spring:
       # Disable auto-commit to allow manual acknowledgment
       enable-auto-commit: false
       properties:
+        ##### JsonDeserializer #####
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        # spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.ParseStringDeserializer
-        # Specify the static parser method using ParseStringDeserializer.VALUE_TYPE key if using ParseStringDeserializer
-        spring.message.value.parser: com.example.kafka.service.MultiConsumer.parser
-        # Fallback/default handling (not required if ParseStringDeserializer used)
+        spring.json.value.type.method: com.example.kafka.service.Consumer.determineType
+        # Fallback type for JsonDeserializer if `determineType` returns null
         spring.json.value.default.type: java.lang.Object
-        ### Following are useful for headers containing __typeId__ when JsonDeserializer is used ###
-        spring.json.type.mapping: "greeting:com.example.kafka.model.Greeting, farewell:com.example.kafka.model.Farewell"
-        # spring.json.trusted.packages: "*"
-        # Uncomment following if using JsonDeserializer to trigger default.type fallback handling
-        # spring.json.use.type.headers: false
+        # spring.json.value.default.type: com.example.kafka.model.Farewell
+
+        ##### ParseStringDeserializer #####
+        #spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.ParseStringDeserializer
+        ## Specify the static parser method using ParseStringDeserializer.VALUE_TYPE key if using ParseStringDeserializer
+        #spring.message.value.parser: com.example.kafka.service.MultiConsumer.parser
+
+        ##### Following are useful for headers containing __typeId__ when JsonDeserializer is used #####
+        # spring.json.type.mapping: "greeting:com.example.kafka.model.Greeting, farewell:com.example.kafka.model.Farewell"
+        spring.json.trusted.packages: "*"
     # Configurations for KafkaListenerContainerFactory
     listener:
       ack-mode: manual_immediate

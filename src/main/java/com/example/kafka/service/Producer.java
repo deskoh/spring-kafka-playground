@@ -1,5 +1,7 @@
 package com.example.kafka.service;
 
+import com.example.kafka.model.Farewell;
+import com.example.kafka.model.Greeting;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -33,6 +35,28 @@ public class Producer {
         future.whenComplete((result, ex) -> {
             if (ex == null) {
                 log.info("Sent message [{}] to topic [{}] with offset [{}]", data, topic, result.getRecordMetadata().offset());
+            } else {
+                log.error(ex.getMessage());
+            }
+        });
+    }
+
+    public void sendGreeting(String topic, Greeting greeting) {
+        var future = this.kafkaTemplate.send(topic, greeting);
+        future.whenComplete((result, ex) -> {
+            if (ex == null) {
+                log.info("Sent greeting [{}] to topic [{}] with offset [{}]", greeting.getMsg(), topic, result.getRecordMetadata().offset());
+            } else {
+                log.error(ex.getMessage());
+            }
+        });
+    }
+
+    public void sendFarewell(String topic, Farewell farewell) {
+        var future = this.kafkaTemplate.send(topic, farewell);
+        future.whenComplete((result, ex) -> {
+            if (ex == null) {
+                log.info("Sent farewell [{}] to topic [{}] with offset [{}]", farewell.getMessage(), topic, result.getRecordMetadata().offset());
             } else {
                 log.error(ex.getMessage());
             }

@@ -64,6 +64,69 @@ Allowing retries without setting `max.in.flight.requests.per.connection=1` might
 
 However, if `enable.idempotence=true` is set, the broker will buffer out-of-order messages using sequence number and only commit them in sequence.
 
+## Deserializing Recipes
+
+Wrap deserializer using `ErrorHandlingDeserializer` to handle deserializing errors.
+
+For non-Java producer, type information would not be present in the record headers, so `JsonDeserializer.VALUE_DEFAULT_TYPE` / `spring.json.value.default.type` needs to be configured to specify fallback type for deserialization of values.
+
+```yml
+  kafka:
+    # ...
+    consumer:
+      # Wraps real deserializer for handling bad data (see spring.deserializer.value.delegate.class)
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: java.lang.Object
+```
+
+For polymorphism deserialization of a single topic, `ParseStringDeserializer` can be used to configure a static method to determine type. The method must be static and have a signature of either `(String, Headers)` or `(String)`.
+
+```yml
+kafka:
+    # ...
+    consumer:
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.ParseStringDeserializer
+        spring.message.value.parser: com.example.kafka.service.MultiConsumer.parser
+```
+
+For a more generalized way for determining target type based on topic, `JsonDeserializer.VALUE_TYPE_METHOD / spring.json.value.type.method` can be configured. The method must be declared as public static, have one of three signatures `(String topic, byte[] data, Headers headers)`, `(byte[] data, Headers headers)` or `(byte[] data)` and return a Jackson `JavaType`.
+
+> `spring.json.value.default.type` can be used as a fallback if the `VALUE_TYPE_METHOD` method returns `null`.
+
+> TODO: See https://docs.spring.io/spring-kafka/reference/kafka/serdes.html#by-topic
+
+```yml
+kafka:
+    # ...
+    consumer:
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.type.method: com.example.kafka.service.Consumer.determineType
+        spring.json.value.default.type: java.lang.Object
+```
+
+```java
+private static JavaType greetingType = TypeFactory.defaultInstance().constructType(Greeting.class);
+
+private static JavaType farewellType = TypeFactory.defaultInstance().constructType(Farewell.class);
+
+public static JavaType determineType(String topic, byte[] data, Headers headers) {
+    if ("demo-topic-farewell".compareTo(topic) == 0) {
+        return farewellType;
+    }
+    else if ("demo-topic-greeting".compareTo(topic) == 0) {
+        return greetingType;
+    }
+    // Return null to use spring.json.value.default.type for fallback
+    return null;
+}
+```
+
 ## Kafka CLI
 
 ```sh
